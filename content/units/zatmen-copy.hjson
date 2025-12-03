@@ -1,0 +1,42 @@
+type: UnitType
+name: zatmen-copy
+localizedName: ЯКУШЕВ ПОТРОШИТЕЛЬ 3000
+description: Вражеский тяжёлый летающий юнит 17 тира.
+tier: 5
+flying: true
+health: 40000
+armor: 20
+speed: 3
+accel: 0.05
+drag: 0.04
+rotateSpeed: 1
+range: 56 * 8
+hitSize: 48
+itemCapacity: 0
+payloadCapacity: 0
+targetAir: true
+targetGround: true
+outlineRadius: 6
+shadowElevation: 24
+weapons: [
+  {
+    name: zatmen-copy-weapon-1
+    reload: 20
+    shootY: 16
+    shootX: 0
+    mirror: false
+    bullet: {
+      type: BasicBulletType
+      damage: 250
+      speed: 13
+      lifetime: 50
+      width: 12
+      height: 20
+      shootEffect: shootBig
+      smokeEffect: shootBigSmoke
+      hitEffect: blastExplosion
+      pierceCap: 2
+      pierceBuilding: true
+    }
+  }
+]
