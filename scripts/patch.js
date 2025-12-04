@@ -1,302 +1,226 @@
-// ========== КОНСТАНТЫ МОДИФИКАЦИЙ ==========
-const MULTIPLIERS = {
-    WALL_HP: 0.2,              // HP стен
-    BUILD_COST: 3,              // Стоимость постройки
-    BUILD_SPEED: 1/3,           // Скорость строительства
-    GENERATOR_POWER: 1/4,       // Производство энергии генераторами
-    CONSUMER_POWER: 3,          // Потребление энергии
-    DRILL_TIME: 3,              // Время добычи
-    PUMP_AMOUNT: 1/3,           // Количество воды из помп
-    CRAFT_TIME: 3,              // Время крафта
-    CRAFT_POWER: 3,             // Энергия для крафта
-    CRAFT_RESOURCES: 3,         // Ресурсы для крафта
-    NODE_RANGE_REDUCTION: 16,   // Уменьшение радиуса узлов
-    NODE_MIN_RANGE: 16,         // Минимальный радиус узла
-    UNIT_SPEED: 1/3,            // Скорость юнитов игрока
-    UNIT_DAMAGE_PLAYER: 1/3,    // Урон юнитов игрока
-    UNIT_RELOAD: 3,             // Перезарядка оружия
-    UNIT_HP_PLAYER: 1/3,        // HP юнитов игрока
-    UNIT_HP_ENEMY: 3,           // HP юнитов врага
-    UNIT_ARMOR_PLAYER: 1/3,     // Броня юнитов игрока
-    UNIT_ARMOR_ENEMY: 3,        // Броня юнитов врага
-    UNIT_DAMAGE_ENEMY: 3,       // Урон юнитов врага
-    TURRET_DAMAGE_ENEMY: 3,     // Урон турелей врага
-    WAVE_SPACING: 3,            // Интервал между волнами
-    CORE_HP: 1,                 // HP ядер игрока
-    CORE_ARMOR: 0               // Броня ядер игрока
-};
+// ========== ЗАГРУЗКА НАСТРОЕК ==========
+// Настройки загружаются из settings.js при инициализации
+// Используем глобальную переменную HardcoreSettings
 
 // ========== СПИСКИ БЛОКОВ ==========
-const WALL_BLOCKS = [
-    "copper-wall", "copper-wall-large",
-    "titanium-wall", "titanium-wall-large",
-    "plastanium-wall", "plastanium-wall-large",
-    "thorium-wall", "thorium-wall-large",
-    "surge-wall", "surge-wall-large",
-    "door", "door-large"
-];
+const WALLS  = ["copper-wall","copper-wall-large","titanium-wall","titanium-wall-large",
+                "plastanium-wall","plastanium-wall-large","thorium-wall","thorium-wall-large",
+                "surge-wall","surge-wall-large","door","door-large"];
+const GENS   = ["combustion-generator","thermal-generator","steam-generator",
+                "differential-generator","rtg-generator","solar-panel","large-solar-panel"];
+const DRILLS = ["mechanical-drill","pneumatic-drill","airblast-drill","laser-drill"];
+const PUMPS  = ["pump","rotary-pump","thermal-pump"];
+const NODES  = ["power-node","power-node-large","surge-tower"];
 
-const GENERATOR_BLOCKS = [
-    "combustion-generator", "thermal-generator",
-    "steam-generator", "differential-generator",
-    "rtg-generator", "solar-panel", "large-solar-panel"
-];
-
-const DRILL_BLOCKS = [
-    "mechanical-drill", "pneumatic-drill",
-    "airblast-drill", "laser-drill"
-];
-
-const POWER_CONSUMER_BLOCKS = [
-    "mechanical-drill", "pneumatic-drill",
-    "airblast-drill", "laser-drill",
-    "water-extractor", "cultivator"
-];
-
-const PUMP_BLOCKS = [
-    "pump", "rotary-pump", "thermal-pump"
-];
-
-const NODE_BLOCKS = [
-    "power-node", "power-node-large", "surge-tower"
-];
-
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-function getBlock(name) {
-    const block = Vars.content.getByName(ContentType.block, name);
-    return block || null;
-}
-
-function patchWalls() {
-    WALL_BLOCKS.forEach(name => {
-        const block = getBlock(name);
-        if (block && block.health) {
-            block.health *= MULTIPLIERS.WALL_HP;
-        }
+// ========== ПАТЧИ БЛОКОВ ==========
+function patchBlocks(){
+    // стены
+    WALLS.forEach(w => {
+        const b = Vars.content.getByName(ContentType.block, w);
+        if(b && b.health) b.health *= HardcoreSettings.WALL_HP;
     });
-}
 
-function patchBuildCosts() {
+    // цена постройки
     Vars.content.blocks().each(b => {
-        if (b && b.requirements) {
-            b.requirements.each(r => {
-                if (r) r.amount *= MULTIPLIERS.BUILD_COST;
-            });
+        if(b && b.requirements){
+            for(let i = 0; i < b.requirements.length; i++) {
+                if(b.requirements[i]) b.requirements[i].amount *= HardcoreSettings.BUILD_COST;
+            }
         }
     });
-}
 
-function patchGenerators() {
-    GENERATOR_BLOCKS.forEach(name => {
-        const block = getBlock(name);
-        if (block && block.powerProduction) {
-            block.powerProduction *= MULTIPLIERS.GENERATOR_POWER;
+    // генераторы
+    GENS.forEach(g => {
+        const b = Vars.content.getByName(ContentType.block, g);
+        if(b && b.powerProduction) b.powerProduction *= HardcoreSettings.GEN_POWER;
+    });
+
+    // реакторы
+    ["thorium-reactor","impulse-reactor"].forEach(r => {
+        const b = Vars.content.getByName(ContentType.block, r);
+        if(b){
+            if(b.heatOutput) b.heatOutput *= HardcoreSettings.GEN_POWER;
+            if(b.powerProduction) b.powerProduction *= HardcoreSettings.GEN_POWER;
         }
     });
-}
 
-function patchPowerConsumers() {
-    POWER_CONSUMER_BLOCKS.forEach(name => {
-        const block = getBlock(name);
-        if (block && block.powerUse) {
-            block.powerUse *= MULTIPLIERS.CONSUMER_POWER;
-        }
+    // потребители энергии
+    DRILLS.forEach(d => {
+        const b = Vars.content.getByName(ContentType.block, d);
+        if(b && b.powerUse) b.powerUse *= HardcoreSettings.CONS_POWER;
     });
-}
-
-function patchDrills() {
-    DRILL_BLOCKS.forEach(name => {
-        const block = getBlock(name);
-        if (block && block.drillTime) {
-            block.drillTime *= MULTIPLIERS.DRILL_TIME;
-        }
+    
+    // водные экстракторы и культиваторы
+    ["water-extractor","cultivator"].forEach(d => {
+        const b = Vars.content.getByName(ContentType.block, d);
+        if(b && b.powerUse) b.powerUse *= HardcoreSettings.CONS_POWER;
     });
-}
 
-function patchPumps() {
-    PUMP_BLOCKS.forEach(name => {
-        const block = getBlock(name);
-        if (block && block.pumpAmount) {
-            block.pumpAmount *= MULTIPLIERS.PUMP_AMOUNT;
-        }
+    // добыча
+    DRILLS.forEach(d => {
+        const b = Vars.content.getByName(ContentType.block, d);
+        if(b && b.drillTime) b.drillTime *= HardcoreSettings.DRILL_TIME;
     });
-}
+    
+    // помпы
+    PUMPS.forEach(p => {
+        const b = Vars.content.getByName(ContentType.block, p);
+        if(b && b.pumpAmount) b.pumpAmount *= HardcoreSettings.PUMP;
+    });
 
-function patchFactories() {
+    // заводы: время, энергия, ресурсы
     Vars.content.blocks().each(b => {
-        if (!b) return;
+        if(!b) return;
         
-        if (b.craftTime) {
-            b.craftTime *= MULTIPLIERS.CRAFT_TIME;
+        if(b.craftTime) b.craftTime *= HardcoreSettings.CRAFT_TIME;
+        
+        if(b.consumes){
+            if(b.consumes.power && b.consumes.power.usage) {
+                b.consumes.power.usage *= HardcoreSettings.CRAFT_PWR;
+            }
+            if(b.consumes.item && b.consumes.item.items){
+                for(let i = 0; i < b.consumes.item.items.length; i++) {
+                    if(b.consumes.item.items[i]) {
+                        b.consumes.item.items[i].amount *= HardcoreSettings.CRAFT_RES;
+                    }
+                }
+            }
+            if(b.consumes.liquid && b.consumes.liquid.amount) {
+                b.consumes.liquid.amount *= HardcoreSettings.CRAFT_RES;
+            }
         }
-        
-        if (b.consumes) {
-            if (b.consumes.power && b.consumes.power.usage) {
-                b.consumes.power.usage *= MULTIPLIERS.CRAFT_POWER;
-            }
-            if (b.consumes.item && b.consumes.item.items) {
-                b.consumes.item.items.each(i => {
-                    if (i) i.amount *= MULTIPLIERS.CRAFT_RESOURCES;
-                });
-            }
-            if (b.consumes.liquid && b.consumes.liquid.amount) {
-                b.consumes.liquid.amount *= MULTIPLIERS.CRAFT_RESOURCES;
-            }
+    });
+
+    // узлы: уменьшение радиуса
+    NODES.forEach(n => {
+        const b = Vars.content.getByName(ContentType.block, n);
+        if(b && b.laserRange){
+            b.laserRange -= HardcoreSettings.NODE_R;
+            if(b.laserRange < HardcoreSettings.NODE_MIN) b.laserRange = HardcoreSettings.NODE_MIN;
         }
     });
 }
 
-function patchNodes() {
-    NODE_BLOCKS.forEach(name => {
-        const node = getBlock(name);
-        if (node && node.laserRange) {
-            node.laserRange -= MULTIPLIERS.NODE_RANGE_REDUCTION;
-            if (node.laserRange < MULTIPLIERS.NODE_MIN_RANGE) {
-                node.laserRange = MULTIPLIERS.NODE_MIN_RANGE;
-            }
-        }
-    });
-}
-
-function patchUnits() {
+// ========== ПАТЧИ ЮНИТОВ ==========
+function patchUnits(){
     Vars.content.units().each(u => {
-        if (!u) return;
+        if(!u) return;
         
         // Базовые параметры для всех юнитов
-        if (u.speed) u.speed *= MULTIPLIERS.UNIT_SPEED;
+        if(u.speed) u.speed *= HardcoreSettings.UNIT_SPD;
         
-        if (u.weapons) {
+        if(u.weapons){
             u.weapons.each(w => {
-                if (w && w.bullet) {
-                    if (w.bullet.damage) {
-                        w.bullet.damage *= MULTIPLIERS.UNIT_DAMAGE_PLAYER;
-                    }
-                    if (w.bullet.reload) {
-                        w.bullet.reload *= MULTIPLIERS.UNIT_RELOAD;
-                    }
+                if(w && w.bullet){
+                    if(w.bullet.damage) w.bullet.damage *= HardcoreSettings.UNIT_DMG_P;
+                    if(w.bullet.reload) w.bullet.reload *= (1 / HardcoreSettings.UNIT_DMG_P); // обратный множитель для перезарядки
                 }
             });
         }
     });
 }
 
-function patchTurrets() {
-    const enemyTurretBullets = new Map();
-    
-    Vars.content.blocks().each(b => {
-        if (!b || !(b instanceof Turret)) return;
-        if (!b.shootType) return;
-        
-        // Сохраняем оригинальный урон для каждой турели
-        const originalDamage = b.shootType.damage;
-        if (originalDamage) {
-            enemyTurretBullets.set(b, originalDamage);
-        }
-    });
-    
-    // Один обработчик для всех турелей врага
-    Events.on(EventType.BlockBuildBeginEvent, e => {
-        if (!e || !e.block || !e.team) return;
-        
-        if (e.block instanceof Turret && e.team != Vars.player.team()) {
-            const originalDamage = enemyTurretBullets.get(e.block);
-            if (originalDamage && e.block.shootType) {
-                // Устанавливаем урон ×3 от оригинального
-                e.block.shootType.damage = originalDamage * MULTIPLIERS.TURRET_DAMAGE_ENEMY;
-            }
-        }
-    });
-}
-
-// ========== ОБРАБОТЧИКИ СОБЫТИЙ (регистрируются ОДИН РАЗ) ==========
-function setupEventHandlers() {
-    // Обработчик создания юнитов (объединенный)
+// ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
+function setupEvents(){
+    // Юниты: игрок слабее, враг сильнее
     Events.on(EventType.UnitCreateEvent, e => {
-        if (!e || !e.unit) return;
+        if(!e || !e.unit) return;
         
-        const isPlayerTeam = e.unit.team == Vars.player.team();
+        const u = e.unit;
+        const isPlayerTeam = u.team === Vars.player.team();
         
-        if (isPlayerTeam) {
+        if(isPlayerTeam){
             // Игрок: слабые юниты
-            if (e.unit.healthMax) e.unit.healthMax *= MULTIPLIERS.UNIT_HP_PLAYER;
-            if (e.unit.armor) e.unit.armor *= MULTIPLIERS.UNIT_ARMOR_PLAYER;
+            if(u.maxHealth) u.health = u.maxHealth * HardcoreSettings.UNIT_HP_P;
+            if(u.armor !== undefined) u.armor *= HardcoreSettings.UNIT_ARM_P;
         } else {
             // Враг: сильные юниты
-            if (e.unit.healthMax) e.unit.healthMax *= MULTIPLIERS.UNIT_HP_ENEMY;
-            if (e.unit.armor) e.unit.armor *= MULTIPLIERS.UNIT_ARMOR_ENEMY;
+            if(u.maxHealth) u.health = u.maxHealth * HardcoreSettings.UNIT_HP_E;
+            if(u.armor !== undefined) u.armor *= HardcoreSettings.UNIT_ARM_E;
             
-            // Урон оружия врага ×3
-            if (e.unit.weapons) {
-                e.unit.weapons.each(w => {
-                    if (w && w.bullet && w.bullet.damage) {
-                        w.bullet.damage *= MULTIPLIERS.UNIT_DAMAGE_ENEMY;
+            // Урон оружия врага
+            if(u.weapons){
+                u.weapons.each(w => {
+                    if(w && w.bullet && w.bullet.damage){
+                        w.bullet.damage *= HardcoreSettings.UNIT_DMG_E;
                     }
                 });
             }
         }
     });
-    
-    // Обработчик загрузки мира для ядер
+
+    // Турели врага: увеличенный урон
+    Events.on(EventType.BlockBuildBeginEvent, e => {
+        if(!e || !e.block || !e.team) return;
+        
+        if(e.block instanceof Turret && e.team !== Vars.player.team() && e.block.shootType){
+            const orig = e.block.shootType;
+            e.block.shootType = new JavaAdapter(orig.class, {}, orig);
+            if(e.block.shootType.damage) {
+                e.block.shootType.damage *= HardcoreSettings.TURRET_DMG_E;
+            }
+        }
+    });
+
+    // Ядра игрока: минимальный HP
     Events.on(EventType.WorldLoadEvent, () => {
-        if (!Vars.world || !Vars.world.tiles) return;
+        if(!Vars.world || !Vars.world.tiles) return;
         
         Vars.world.tiles.each(t => {
-            if (!t || !t.build) return;
+            if(!t || !t.build) return;
             
-            if (t.build instanceof CoreBuild && t.build.team == Vars.player.team()) {
-                t.build.health = MULTIPLIERS.CORE_HP;
-                t.build.armor = MULTIPLIERS.CORE_ARMOR;
+            const build = t.build;
+            if(build.team === Vars.player.team() &&
+               build instanceof mindustry.world.blocks.storage.CoreBlock.CoreBuild){
+                build.health = HardcoreSettings.CORE_HP;
+                build.armor = HardcoreSettings.CORE_ARM;
             }
         });
-    });
-    
-    // Обработчик разрушения блоков (заглушка для будущих улучшений)
-    Events.on(EventType.BlockDestroyEvent, e => {
-        if (!e || !e.tile || !e.tile.build) return;
-        
-        if (e.tile.build.team != Vars.player.team()) {
-            // Здесь можно добавить логику для AoE-урона от вражеских блоков
-        }
     });
 }
 
 // ========== ГЛОБАЛЬНЫЕ ПРАВИЛА ==========
-function setupGlobalRules() {
-    if (!Vars.state || !Vars.state.rules) return;
+function setupGlobalRules(){
+    if(!Vars.state || !Vars.state.rules) return;
     
-    Vars.state.rules.buildCostMultiplier = MULTIPLIERS.BUILD_COST;
-    Vars.state.rules.buildSpeedMultiplier = MULTIPLIERS.BUILD_SPEED;
-    Vars.state.rules.unitBuildSpeedMultiplier = MULTIPLIERS.UNIT_SPEED;
+    Vars.state.rules.buildCostMultiplier = HardcoreSettings.BUILD_COST;
+    Vars.state.rules.buildSpeedMultiplier = HardcoreSettings.BUILD_SPEED;
+    Vars.state.rules.unitBuildSpeedMultiplier = HardcoreSettings.UNIT_SPD;
     
-    if (Vars.state.rules.waveSpacing) {
-        Vars.state.rules.waveSpacing *= MULTIPLIERS.WAVE_SPACING;
+    if(Vars.state.rules.waveSpacing) {
+        Vars.state.rules.waveSpacing *= HardcoreSettings.WAVE_SP;
     }
 }
 
-// ========== ГЛАВНАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ ==========
-function init() {
-    // Патчинг блоков
-    patchWalls();
-    patchBuildCosts();
-    patchGenerators();
-    patchPowerConsumers();
-    patchDrills();
-    patchPumps();
-    patchFactories();
-    patchNodes();
-    
-    // Патчинг юнитов
-    patchUnits();
-    
-    // Патчинг турелей
-    patchTurrets();
-    
-    // Настройка глобальных правил
-    setupGlobalRules();
-    
-    // Регистрация обработчиков событий (ОДИН РАЗ)
-    setupEventHandlers();
+// ========== ЗАПУСК ==========
+// Убеждаемся, что настройки загружены
+// Если settings.js ещё не загрузился, загружаем настройки здесь
+function hasKeys(obj) {
+    if (!obj) return false;
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) return true;
+    }
+    return false;
 }
 
-// Запуск инициализации
-init();
+if(typeof HardcoreSettings === 'undefined' || !HardcoreSettings || !hasKeys(HardcoreSettings)){
+    // Если функция загрузки доступна, используем её, иначе создаём дефолтные настройки
+    if(typeof loadHardcoreSettings === 'function'){
+        loadHardcoreSettings();
+    } else {
+        // Временные значения по умолчанию на случай, если settings.js не загрузился
+        HardcoreSettings = {
+            WALL_HP: 0.25, BUILD_COST: 3, BUILD_SPEED: 0.333,
+            GEN_POWER: 0.25, CONS_POWER: 3, DRILL_TIME: 3, PUMP: 0.333,
+            CRAFT_TIME: 3, CRAFT_PWR: 3, CRAFT_RES: 3,
+            NODE_R: 16, NODE_MIN: 16, UNIT_SPD: 0.333, UNIT_DMG_P: 0.333,
+            UNIT_HP_P: 0.333, UNIT_HP_E: 3, UNIT_ARM_P: 0.333, UNIT_ARM_E: 3,
+            UNIT_DMG_E: 3, TURRET_DMG_E: 3, WAVE_SP: 1, CORE_HP: 1, CORE_ARM: 0
+        };
+    }
+}
+
+patchBlocks();
+patchUnits();
+setupEvents();
+setupGlobalRules();
